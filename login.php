@@ -2,37 +2,30 @@
 session_start();
 require 'config.php';
 
-if (isset($_SESSION['user_id'])) {
-    header("Location: dashboard.php");
-    exit();
-}
-
-$error = "";
+$msg = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+    $login_input = trim($_POST['login_input']); // رقم الهاتف أو البريد
+    $password = trim($_POST['password']);
 
-    $stmt = $conn->prepare("SELECT id, name, password, status FROM students WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    // البحث عن الطالب باستخدام PDO الصحيح
+    $stmt = $conn->prepare("SELECT * FROM students WHERE email = ? OR phone = ?");
+    $stmt->execute([$login_input, $login_input]);
+    $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($row = $result->fetch_assoc()) {
-        if ($row['status'] === 'banned') {
-            $error = "🚫 تم حظر حسابك. يرجى مراجعة الإدارة.";
+    if ($student) {
+        if ($student['status'] === 'banned') {
+            $msg = "<div style='background: #ef4444; color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px;'>⛔ عذراً، تم حظر هذا الحساب. يرجى التواصل مع الإدارة.</div>";
+        } elseif ($password === $student['password']) {
+            $_SESSION['student_id'] = $student['id'];
+            $_SESSION['student_name'] = $student['name'];
+            header("Location: dashboard.php");
+            exit();
         } else {
-            if ($password === $row['password']) {
-                $_SESSION['user_id'] = $row['id'];
-                $_SESSION['user_name'] = $row['name'];
-                header("Location: dashboard.php");
-                exit();
-            } else {
-                $error = "❌ كلمة المرور غير صحيحة.";
-            }
+            $msg = "<div style='background: #ef4444; color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px;'>❌ كلمة المرور غير صحيحة.</div>";
         }
     } else {
-        $error = "❌ هذا الحساب غير موجود. تأكد من الإيميل أو اشترك أولاً.";
+        $msg = "<div style='background: #ef4444; color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px;'>❌ البيانات المدخلة غير مسجلة لدينا. يرجى الاشتراك أولاً.</div>";
     }
 }
 ?>
@@ -44,49 +37,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>تسجيل دخول الطلاب - English Witch</title>
     <style>
         :root { --primary: #2c4c65; --accent: #e51b23; --bg: #f4f6f9; --white: #ffffff; }
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background: var(--primary); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        
-        .login-card { background: var(--white); padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px; text-align: center; border-bottom: 5px solid var(--accent); }
-        .login-card h2 { color: var(--primary); margin-bottom: 5px; font-family: serif; font-size: 26px; }
-        .login-card p { color: #64748b; margin-bottom: 25px; font-size: 14px; }
-        
-        .alert { background: #fef2f2; color: #dc2626; padding: 12px; border-radius: 8px; border: 1px solid #fecaca; margin-bottom: 20px; font-weight: bold; font-size: 14px; }
-        
-        label { display: block; text-align: right; margin-bottom: 8px; color: var(--primary); font-weight: bold; font-size: 14px; }
-        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; direction: ltr; text-align: left; }
-        input:focus { outline: none; border-color: var(--primary); }
-        
-        .btn-submit { background: var(--accent); color: var(--white); padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; margin-bottom: 15px; }
-        .btn-submit:hover { background: #c0151d; }
-        
-        .links { font-size: 13px; }
-        .links a { color: var(--primary); text-decoration: none; font-weight: bold; }
-        .links a:hover { text-decoration: underline; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; background: var(--bg); color: #333; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .card { background: var(--white); padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); width: 100%; max-width: 400px; border: 1px solid #e2e8f0; }
+        .card h2 { color: var(--primary); margin-top: 0; text-align: center; margin-bottom: 25px; font-family: serif; }
+        label { display: block; margin-bottom: 6px; color: var(--primary); font-weight: bold; font-size: 14px; }
+        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        .btn-main { background: var(--primary); color: var(--white); width: 100%; padding: 12px; border: none; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .btn-main:hover { background: #1e3547; }
+        .back-link { display: block; text-align: center; margin-top: 20px; text-decoration: none; color: #64748b; font-size: 14px; font-weight: bold; }
+        .back-link:hover { color: var(--primary); }
     </style>
 </head>
 <body>
 
-    <div class="login-card">
-        <h2>English Witch</h2>
-        <p>تسجيل دخول الطلاب 🧙‍♂️</p>
-        
-        <?php if(!empty($error)) echo "<div class='alert'>$error</div>"; ?>
-        
+    <div class="card">
+        <h2>🎓 دخول الطلاب</h2>
+        <?php echo $msg; ?>
         <form method="POST">
-            <label>البريد الإلكتروني (الإيميل):</label>
-            <input type="email" name="email" placeholder="01xxxxxxxx@englishwitch.com" required>
+            <label>رقم الهاتف أو البريد الإلكتروني:</label>
+            <input type="text" name="login_input" placeholder="مثال: 0912345678" required>
             
             <label>كلمة المرور:</label>
-            <input type="password" name="password" placeholder="123456" required>
-            
-            <button type="submit" class="btn-submit">تسجيل الدخول 🚀</button>
+            <input type="password" name="password" placeholder="أدخل كلمة المرور..." required>
+
+            <button type="submit" class="btn-main">تسجيل الدخول 🚀</button>
         </form>
-        
-        <div class="links">
-            <a href="index.php">الرئيسية</a> | 
-            <a href="subscribe.php" style="color: var(--accent);">اشترك الآن</a>
-        </div>
+        <a href="index.php" class="back-link">← العودة للصفحة الرئيسية</a>
     </div>
 
 </body>
