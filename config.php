@@ -1,70 +1,82 @@
 <?php
-session_start();
-require 'config.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-$msg = "";
+$host = 'iriguchi.proxy.rlwy.net';
+$user = 'root';
+$pass = 'DXFNVTlqkOgnhRzVHkaxZFHSoZDarDpa'; 
+$db   = 'railway';
+$port = '37552';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $login_input = trim($_POST['login_input']); // رقم الهاتف أو البريد
-    $password = trim($_POST['password']);
+try {
+    $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
+    $conn = new PDO($dsn, $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_TIMEOUT => 15
+    ]);
 
-    // البحث عن الطالب باستخدام PDO الصحيح
-    $stmt = $conn->prepare("SELECT * FROM students WHERE email = ? OR phone = ?");
-    $stmt->execute([$login_input, $login_input]);
-    $student = $stmt->fetch(PDO::FETCH_ASSOC);
+    // إنشاء كافة الجداول تلقائياً لمنع أي أخطاء مفقودة
+    $conn->exec("CREATE TABLE IF NOT EXISTS courses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT DEFAULT NULL,
+        icon VARCHAR(50) DEFAULT '📖',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 
-    if ($student) {
-        if ($student['status'] === 'banned') {
-            $msg = "<div style='background: #ef4444; color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px;'>⛔ عذراً، تم حظر هذا الحساب. يرجى التواصل مع الإدارة.</div>";
-        } elseif ($password === $student['password']) {
-            $_SESSION['student_id'] = $student['id'];
-            $_SESSION['student_name'] = $student['name'];
-            header("Location: dashboard.php");
-            exit();
-        } else {
-            $msg = "<div style='background: #ef4444; color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px;'>❌ كلمة المرور غير صحيحة.</div>";
-        }
-    } else {
-        $msg = "<div style='background: #ef4444; color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px;'>❌ البيانات المدخلة غير مسجلة لدينا. يرجى الاشتراك أولاً.</div>";
-    }
+    $conn->exec("CREATE TABLE IF NOT EXISTS students (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(150),
+        email VARCHAR(150),
+        phone VARCHAR(50),
+        password VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    $conn->exec("CREATE TABLE IF NOT EXISTS payment_methods (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        method_name VARCHAR(150),
+        account_details TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    $conn->exec("CREATE TABLE IF NOT EXISTS payment_requests (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_name VARCHAR(150),
+        phone VARCHAR(50),
+        course_id INT,
+        receipt_image TEXT,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    $conn->exec("CREATE TABLE IF NOT EXISTS enrollments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT,
+        course_id INT,
+        payment_type VARCHAR(50) DEFAULT 'كاش',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    $conn->exec("CREATE TABLE IF NOT EXISTS course_materials (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        course_id INT,
+        title VARCHAR(255),
+        material_type VARCHAR(50),
+        material_link TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    $conn->exec("CREATE TABLE IF NOT EXISTS live_sessions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        course_id INT,
+        zoom_link TEXT,
+        is_active TINYINT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+} catch (PDOException $e) {
+    die("خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage());
 }
 ?>
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل دخول الطلاب - English Witch</title>
-    <style>
-        :root { --primary: #2c4c65; --accent: #e51b23; --bg: #f4f6f9; --white: #ffffff; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; background: var(--bg); color: #333; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .card { background: var(--white); padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); width: 100%; max-width: 400px; border: 1px solid #e2e8f0; }
-        .card h2 { color: var(--primary); margin-top: 0; text-align: center; margin-bottom: 25px; font-family: serif; }
-        label { display: block; margin-bottom: 6px; color: var(--primary); font-weight: bold; font-size: 14px; }
-        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
-        .btn-main { background: var(--primary); color: var(--white); width: 100%; padding: 12px; border: none; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
-        .btn-main:hover { background: #1e3547; }
-        .back-link { display: block; text-align: center; margin-top: 20px; text-decoration: none; color: #64748b; font-size: 14px; font-weight: bold; }
-        .back-link:hover { color: var(--primary); }
-    </style>
-</head>
-<body>
-
-    <div class="card">
-        <h2>🎓 دخول الطلاب</h2>
-        <?php echo $msg; ?>
-        <form method="POST">
-            <label>رقم الهاتف أو البريد الإلكتروني:</label>
-            <input type="text" name="login_input" placeholder="مثال: 0912345678" required>
-            
-            <label>كلمة المرور:</label>
-            <input type="password" name="password" placeholder="أدخل كلمة المرور..." required>
-
-            <button type="submit" class="btn-main">تسجيل الدخول 🚀</button>
-        </form>
-        <a href="index.php" class="back-link">← العودة للصفحة الرئيسية</a>
-    </div>
-
-</body>
-</html>
-
