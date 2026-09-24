@@ -2,22 +2,11 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// التحقق هل نحن في ريلوي ولا على السيرفر المحلي
-if (getenv('MYSQLHOST') || getenv('RAILWAY_STATIC_URL')) {
-    // إعدادات سحابة ريلوي
-    $host = getenv('MYSQLHOST') ?: 'yamabiko.proxy.rlwy.net';
-    $user = getenv('MYSQLUSER') ?: 'root';
-    $pass = getenv('MYSQLPASSWORD') ?: 'FJMtllwHMAvVsWblAUTcMHoLdvTlnQPk'; 
-    $db   = getenv('MYSQLDATABASE') ?: 'railway';
-    $port = getenv('MYSQLPORT') ?: '3306';
-} else {
-    // إعدادات الاستضافة المحلية (Localhost) الخاصة بك
-    $host = 'localhost';
-    $user = 'root';
-    $pass = ''; // كلمة المرور المحلية غالباً فارغة
-    $db   = 'english_witch'; // اسم قاعدة بياناتك المحلية (عدله لو مختلف)
-    $port = '3306';
-}
+$host = 'iriguchi.proxy.rlwy.net';
+$user = 'root';
+$pass = 'DXFNVTlqkOgnhRzVHkaxZFHSoZDarDpa'; 
+$db   = 'railway';
+$port = '37552';
 
 try {
     $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
