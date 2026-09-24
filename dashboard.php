@@ -2,18 +2,19 @@
 session_start();
 require 'config.php';
 
-// حماية الصفحة
-if (!isset($_SESSION['user_id'])) {
+// حماية الصفحة والتأكد من تطابق متغير الجلسة
+if (!isset($_SESSION['student_id'])) {
     header("Location: login.php");
     exit();
 }
 
-$student_id = $_SESSION['user_id'];
-$student_name = $_SESSION['user_name'];
+$student_id = $_SESSION['student_id'];
+$student_name = $_SESSION['student_name'] ?? 'طالب مميز';
 
-// 1. جلب بيانات الكورس المسجل فيه الطالب
-$enroll_query = $conn->query("SELECT e.*, c.title, c.icon FROM enrollments e JOIN courses c ON e.course_id = c.id WHERE e.student_id = $student_id LIMIT 1");
-$enrollment = $enroll_query->fetch_assoc();
+// 1. جلب بيانات الكورس المسجل فيه الطالب باستخدام PDO
+$stmt_enroll = $conn->prepare("SELECT e.*, c.title, c.icon FROM enrollments e JOIN courses c ON e.course_id = c.id WHERE e.student_id = ? LIMIT 1");
+$stmt_enroll->execute([$student_id]);
+$enrollment = $stmt_enroll->fetch(PDO::FETCH_ASSOC);
 
 // 2. التحقق من وجود بث مباشر (Live Zoom) وزر اختبار تحديد المستوى
 $zoom_alert = "";
@@ -22,9 +23,11 @@ if ($enrollment) {
     $course_id = $enrollment['course_id'];
     
     // فحص الزوم الشغال
-    $check_live = $conn->query("SELECT zoom_link FROM live_sessions WHERE course_id = $course_id AND is_active = 1");
-    if ($check_live && $check_live->num_rows > 0) {
-        $live = $check_live->fetch_assoc();
+    $stmt_live = $conn->prepare("SELECT zoom_link FROM live_sessions WHERE course_id = ? AND is_active = 1");
+    $stmt_live->execute([$course_id]);
+    $live = $stmt_live->fetch(PDO::FETCH_ASSOC);
+    
+    if ($live) {
         $zoom_link = $live['zoom_link'];
         $zoom_alert = "
         <div style='background: #fee2e2; border: 1px solid #fca5a5; color: #e51b23; padding: 15px; border-radius: 8px; font-weight: bold; text-align: center; margin-bottom: 20px; animation: pulse 1.5s infinite;'>
@@ -33,9 +36,11 @@ if ($enrollment) {
     }
 
     // جلب اختبار تحديد المستوى الخاص بالكورس (إن وجد)
-    $check_exam = $conn->query("SELECT * FROM exams WHERE course_id = $course_id ORDER BY id DESC LIMIT 1");
-    if ($check_exam && $check_exam->num_rows > 0) {
-        $exam = $check_exam->fetch_assoc();
+    $stmt_exam = $conn->prepare("SELECT * FROM exams WHERE course_id = ? ORDER BY id DESC LIMIT 1");
+    $stmt_exam->execute([$course_id]);
+    $exam = $stmt_exam->fetch(PDO::FETCH_ASSOC);
+    
+    if ($exam) {
         $exam_link = $exam['exam_link'];
         $exam_title = $exam['exam_title'];
         $exam_section = "
@@ -125,3 +130,4 @@ if ($enrollment) {
 
 </body>
 </html>
+
