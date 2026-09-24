@@ -76,7 +76,16 @@ try {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
 
+    $conn->exec("CREATE TABLE IF NOT EXISTS exams (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        course_id INT,
+        exam_title VARCHAR(150),
+        exam_link TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
 } catch (PDOException $e) {
     die("خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage());
 }
 ?>
+
