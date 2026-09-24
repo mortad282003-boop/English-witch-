@@ -87,5 +87,3 @@ try {
 } catch (PDOException $e) {
     die("خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage());
 }
-?>
-
