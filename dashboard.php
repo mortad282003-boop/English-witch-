@@ -2,7 +2,7 @@
 session_start();
 require 'config.php';
 
-// حماية الصفحة والتأكد من تطابق متغير الجلسة
+// حماية الصفحة والتأكد من جلسة الطالب
 if (!isset($_SESSION['student_id'])) {
     header("Location: login.php");
     exit();
@@ -16,22 +16,23 @@ $stmt_enroll = $conn->prepare("SELECT e.*, c.title, c.icon FROM enrollments e JO
 $stmt_enroll->execute([$student_id]);
 $enrollment = $stmt_enroll->fetch(PDO::FETCH_ASSOC);
 
-// 2. التحقق من وجود بث مباشر (Live Zoom) وزر اختبار تحديد المستوى
+// 2. التحقق من وجود بث مباشر (Live Zoom) نشط واختبار تحديد المستوى
 $zoom_alert = "";
 $exam_section = "";
 if ($enrollment) {
     $course_id = $enrollment['course_id'];
     
-    // فحص الزوم الشغال
-    $stmt_live = $conn->prepare("SELECT zoom_link FROM live_sessions WHERE course_id = ? AND is_active = 1");
+    // فحص الزوم الشغال والتأكد من جلب الرابط بدقة
+    $stmt_live = $conn->prepare("SELECT zoom_link FROM live_sessions WHERE course_id = ? AND is_active = 1 LIMIT 1");
     $stmt_live->execute([$course_id]);
     $live = $stmt_live->fetch(PDO::FETCH_ASSOC);
     
-    if ($live) {
+    if ($live && !empty($live['zoom_link'])) {
         $zoom_link = $live['zoom_link'];
         $zoom_alert = "
-        <div style='background: #fee2e2; border: 1px solid #fca5a5; color: #e51b23; padding: 15px; border-radius: 8px; font-weight: bold; text-align: center; margin-bottom: 20px; animation: pulse 1.5s infinite;'>
-            🔴 المحاضرة تعمل الآن مباشر (Live) - <a href='{$zoom_link}' target='_blank' style='color: #e51b23; text-decoration: underline;'>اضغط هنا للدخول لغرفة الزوم</a>
+        <div style='background: #fee2e2; border: 2px solid #ef4444; color: #b91c1c; padding: 20px; border-radius: 12px; font-weight: bold; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2); animation: pulse 1.5s infinite;'>
+            <div style='font-size: 18px; margin-bottom: 8px;'>🔴 المحاضرة تعمل الآن مباشر (Live Zoom)</div>
+            <a href='{$zoom_link}' target='_blank' style='display: inline-block; background: #ef4444; color: white; padding: 10px 25px; border-radius: 8px; text-decoration: none; margin-top: 5px; font-size: 16px; transition: 0.3s;'>انضم لغرفة الزوم الآن 🚀</a>
         </div>";
     }
 
@@ -88,7 +89,7 @@ if ($enrollment) {
 
     <div class="container">
         
-        <!-- التنبيه بتاع اللايف زوم -->
+        <!-- قسم التنبيه ومباشر الزوم -->
         <?php echo $zoom_alert; ?>
 
         <?php if ($enrollment): ?>
@@ -100,7 +101,7 @@ if ($enrollment) {
                 <div class="info-row"><span>حالة الحساب:</span> <span style="color: #10b981;">تم التفعيل بنجاح ✅</span></div>
             </div>
 
-            <!-- كارت محتوى الدروس والملفات (PDF / صوتي / يوتيوب) -->
+            <!-- كارت محتوى الدروس والملفات -->
             <div class="card">
                 <h3>📁 محتوى الكورس</h3>
                 <p style="color: var(--text-gray); font-size: 13px; line-height: 1.5;">استعرض الملفات والدروس التعليمية المرفوعة من الإدارة.</p>
@@ -130,4 +131,3 @@ if ($enrollment) {
 
 </body>
 </html>
-
