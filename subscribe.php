@@ -2,15 +2,15 @@
 session_start();
 require 'config.php';
 
-// إنشاء جدول طرق الدفع تلقائياً لو غير موجود
-$conn->exec("CREATE TABLE IF NOT EXISTS payment_methods (
+// التأكد من وجود جدول الكورسات وجدول طلبات الدفع
+$conn->exec("CREATE TABLE IF NOT EXISTS courses (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    method_name VARCHAR(150),
-    account_details TEXT,
+    title VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    icon VARCHAR(50) DEFAULT '📖',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )");
 
-// إنشاء جدول طلبات الدفع لو غير موجود
 $conn->exec("CREATE TABLE IF NOT EXISTS payment_requests (
     id INT AUTO_INCREMENT PRIMARY KEY,
     student_name VARCHAR(150),
@@ -25,9 +25,6 @@ $course_id = $_GET['course_id'] ?? '';
 
 // جلب الكورسات للقائمة المنسدلة
 $courses = $conn->query("SELECT * FROM courses")->fetchAll(PDO::FETCH_ASSOC);
-
-// جلب طرق الدفع المتاحة
-$payment_methods = $conn->query("SELECT * FROM payment_methods")->fetchAll(PDO::FETCH_ASSOC);
 
 $msg = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_payment'])) {
